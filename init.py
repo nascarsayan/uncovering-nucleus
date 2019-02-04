@@ -1,8 +1,12 @@
 import networkx as nx
 import csv
 import matplotlib.pyplot as plt
+from sys import argv
 
-rootdir = './dummyDataset'
+rootdir = './twitterDataset'
+if len(argv) > 1 and argv[1] == 'test':
+  rootDir = './dummyDataset'
+
 nfile = '%s/nodes.csv' % (rootdir)
 efile = '%s/edges.csv' % (rootdir)
 
@@ -26,10 +30,12 @@ def getDep(G, cores):
   betas = list(map(lambda x: x / 10, list(range(11))))
   dep = []
   for beta in betas:
+    print('+++ Beta = %f' %(beta))
     nodes = G.nodes()
     k_max = max(cores.values())
     depBeta = [{v: 0 for v in nodes}]
     for k in range(1, k_max + 1):
+      print('+++ k = %f' %(k))
       depBetaK = {}
       for v in nodes:
         depBetaK[v] = depBeta[k - 1][v]
@@ -43,12 +49,19 @@ def getDep(G, cores):
 
 
 def main():
+  print('Reading nodes...')
   nodes = list(map(lambda x: x[0], readCsv(nfile)))
+  print('Done!\nReading edges...')
   edges = readCsv(efile)
+  print('Done!\nAdding nodes...')
   G = nx.Graph()
   G.add_nodes_from(nodes)
+  print('Done!\nAdding edges...')
   G.add_edges_from(edges)
+  print('Done!\nCalculating core values...')
+  G.remove_edges_from(nx.selfloop_edges(G))
   cores = nx.core_number(G)
+  print('Done!\nGetting dependency values...',)  
   print(getDep(G, cores))
 
 
