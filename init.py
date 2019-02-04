@@ -2,10 +2,9 @@ import networkx as nx
 import csv
 import matplotlib.pyplot as plt
 from sys import argv
-
 rootdir = './twitterDataset'
 if len(argv) > 1 and argv[1] == 'test':
-  rootDir = './dummyDataset'
+  rootdir = './dummyDataset'
 
 nfile = '%s/nodes.csv' % (rootdir)
 efile = '%s/edges.csv' % (rootdir)
