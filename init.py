@@ -2,6 +2,8 @@ import networkx as nx
 import csv
 import matplotlib.pyplot as plt
 from sys import argv
+import json
+
 rootdir = './twitterDataset'
 if len(argv) > 1 and argv[1] == 'test':
   rootdir = './dummyDataset'
@@ -60,8 +62,10 @@ def main():
   print('Done!\nCalculating core values...')
   G.remove_edges_from(nx.selfloop_edges(G))
   cores = nx.core_number(G)
-  print('Done!\nGetting dependency values...',)  
-  print(getDep(G, cores))
+  print('Done!\nGetting dependency values...',)
+  dep = getDep(G, cores)
+  with open('dep.json', 'w') as fp:
+    json.dump(dep, fp)  
 
 
 if __name__ == '__main__':
