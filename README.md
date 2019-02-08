@@ -9,3 +9,15 @@ This project is the python implementation of the paper "Uncovering the Nucleus o
 ```bash
 pip3 install -r requirements.txt
 ```
+
+## Usage
+
+```bash
+python3 init.py [/path/to/edgelist/file]
+```
+
+For example,
+
+```bash
+python3 init.py dataset/oregon2_010331.txt
+```
