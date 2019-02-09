@@ -13,11 +13,13 @@ pip3 install -r requirements.txt
 ## Usage
 
 ```bash
-python3 init.py [/path/to/edgelist/file]
+python3 init.py ['/path/to/edgelist/file']
 ```
 
 For example,
 
 ```bash
-python3 init.py dataset/oregon2_010331.txt
+python3 init.py './dataset/ca-AstroPh.txt'
 ```
+
+This will output the Nuclear-Index graph in the folder './out/dataset/ca-AstroPh.txt/ni'

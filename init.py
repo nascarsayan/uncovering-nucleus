@@ -5,6 +5,7 @@ from sys import argv
 import json
 import os
 import re
+from collections import Counter
 
 efile = './dummyDataset/edges.csv'
 if len(argv) > 1:
@@ -22,16 +23,16 @@ def readEdges(fname):
   if fname.endswith('.txt'):
     with open(fname, 'r') as txtfile:
       for line in txtfile:
-        if not line.startswith('#'):
+        if ((line.strip())[0]).isdigit():
           break
       line = txtfile.readline()
       delim = '[ \t]+'
       if ',' in line:
         delim = ','
-      rows.append(list(map(lambda x: int(x.strip()), re.split(delim, line.strip()))))
+      rows.append((list(map(lambda x: int(x.strip()), re.split(delim, line.strip()))))[:2])
       for line in txtfile:
         try:
-          rows.append(list(map(lambda x: int(x.strip()), re.split(delim, line.strip()))))
+          rows.append((list(map(lambda x: int(x.strip()), re.split(delim, line.strip()))))[:2])
         except Exception as _:
           pass
   else:
@@ -48,26 +49,61 @@ def drawGraph(G, figname='graph.png'):
   plt.savefig(figname)
   plt.clf()
 
+def lineGraphs(y, label, title='line-graph', filename='line.png', clf=True):
+  plt.ylim(0, max(list(map(lambda ye: max(ye), y))))
+  xe = list(range(len(y[0])))
+  for i in range(0, 12, 2):
+    plt.plot(xe, y[i], '.-', label='B=%.1f' % (label[i]))
+  plt.legend()
+  plt.title(title)
+  plt.savefig(filename)
+  if clf:
+    plt.clf()
+
 
 def getDep(G, cores, outputDir):
   betas = list(map(lambda x: x / 10, list(range(11))))
   nodes = G.nodes()
+  edges = G.edges()
   k_max = max(cores.values())
+  ni = []
+  aggni = []
   for beta in betas:
-    print('+++ Beta = %f' %(beta))
+    print('+++ β = %0.1f' %(beta))
     depBeta = [{v: 0 for v in nodes}]
     for k in range(1, k_max + 1):
-      print('+++ k = %f' %(k))
       depBetaK = {}
       for v in nodes:
         depBetaK[v] = depBeta[k - 1][v]
+        if k > cores[v]:
+          continue
         nbrs = list(
-            filter(lambda v: cores[v] == k, list(nx.all_neighbors(G, v))))
+            filter(lambda u: cores[u] == k, list(nx.all_neighbors(G, v))))
         depBetaK[v] += len(nbrs) + beta * sum(
             list(map(lambda u: depBeta[k - 1][u], nbrs)))
       depBeta.append(depBetaK)
-    dumpData(depBeta, '%s/dep/%d.json' % (outputDir, beta*10))
-
+    # dumpData(depBeta, '%s/dep/%d.json' % (outputDir, beta * 10))
+    sumDep = sum(depBeta[-1].values())
+    vk_1 = nodes
+    ek_1 = edges
+    nib = [0]
+    for k in range(1, k_max):
+      vk = list(filter(lambda u: cores[u] > k, vk_1))
+      ek = list(filter(lambda e: cores[e[0]] > k and cores[e[1]] > k, ek_1))
+      nibk = (1 / len(vk_1)) * (len(ek) / (len(vk) * (len(vk) - 1))) * (sum(list(map(lambda i: depBeta[-1][i], vk))) / sumDep)
+      nib.append(nibk)
+      vk_1 = vk
+      ek_1 = ek
+    nib += [0]
+    dumpData(nib, '%s/ni/%d.json' % (outputDir, beta * 10))
+    mni = nib.index(max(nib))
+    print('Nuclear Index = ', mni)
+    ni.append(nib)
+    aggni.append(mni)
+  lineGraphs(ni, betas, 'NuclearIndex', '%s/ni/graph.png' %(outputDir))
+  cnt = Counter(aggni)
+  kc = (cnt.most_common(1))[0][0]
+  print('@@@ Aggregate Nuclear Index = %d, β chosen = %r' %(kc, list(map(lambda x: betas[x], filter(lambda y: aggni[y] == kc, range(10))))))
 
 
 def main():
@@ -75,6 +111,8 @@ def main():
     os.makedirs(outputDir)
   if not(os.path.exists('%s/dep' % outputDir)):
     os.makedirs('%s/dep' % outputDir)
+  if not(os.path.exists('%s/ni' % outputDir)):
+    os.makedirs('%s/ni' % outputDir)
   print('Reading edges...')
   edges = readEdges(efile)
   G = nx.Graph()
