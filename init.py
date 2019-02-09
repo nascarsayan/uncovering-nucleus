@@ -62,7 +62,7 @@ def lineGraphs(y, label, title='line-graph', filename='line.png', clf=True):
   plt.legend()
   plt.title(title)
   plt.xlabel('G_k (k-core)')
-  plt.ylabel('NI(G_k, dep(i, β)')
+  plt.ylabel('NI (G_k, dep(i, β))')
   plt.savefig(filename)
   if clf:
     plt.clf()
