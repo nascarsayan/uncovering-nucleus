@@ -29,10 +29,13 @@ def readEdges(fname):
       delim = '[ \t]+'
       if ',' in line:
         delim = ','
-      rows.append((list(map(lambda x: int(x.strip()), re.split(delim, line.strip()))))[:2])
+      rows.append((list(
+          map(lambda x: int(x.strip()), re.split(delim, line.strip()))))[:2])
       for line in txtfile:
         try:
-          rows.append((list(map(lambda x: int(x.strip()), re.split(delim, line.strip()))))[:2])
+          rows.append((list(
+              map(lambda x: int(x.strip()), re.split(delim,
+                                                     line.strip()))))[:2])
         except Exception as _:
           pass
   else:
@@ -48,6 +51,7 @@ def drawGraph(G, figname='graph.png'):
   nx.draw(G, with_labels=True, font_weight='bold')
   plt.savefig(figname)
   plt.clf()
+
 
 def lineGraphs(y, label, title='line-graph', filename='line.png', clf=True):
   plt.ylim(0, max(list(map(lambda ye: max(ye), y))))
@@ -69,7 +73,7 @@ def getDep(G, cores, outputDir):
   ni = []
   aggni = []
   for beta in betas:
-    print('+++ β = %0.1f' %(beta))
+    print('+++ β = %0.1f' % (beta))
     depBeta = [{v: 0 for v in nodes}]
     for k in range(1, k_max + 1):
       depBetaK = {}
@@ -90,7 +94,8 @@ def getDep(G, cores, outputDir):
     for k in range(1, k_max):
       vk = list(filter(lambda u: cores[u] > k, vk_1))
       ek = list(filter(lambda e: cores[e[0]] > k and cores[e[1]] > k, ek_1))
-      nibk = (1 / len(vk_1)) * (len(ek) / (len(vk) * (len(vk) - 1))) * (sum(list(map(lambda i: depBeta[-1][i], vk))) / sumDep)
+      nibk = (1 / len(vk_1)) * (len(ek) / (len(vk) * (len(vk) - 1))) * (
+          sum(list(map(lambda i: depBeta[-1][i], vk))) / sumDep)
       nib.append(nibk)
       vk_1 = vk
       ek_1 = ek
@@ -100,18 +105,22 @@ def getDep(G, cores, outputDir):
     print('Nuclear Index = ', mni)
     ni.append(nib)
     aggni.append(mni)
-  lineGraphs(ni, betas, 'NuclearIndex', '%s/ni/graph.png' %(outputDir))
+  lineGraphs(ni, betas, 'NuclearIndex', '%s/ni/graph.png' % (outputDir))
   cnt = Counter(aggni)
   kc = (cnt.most_common(1))[0][0]
-  print('@@@ Aggregate Nuclear Index = %d, β chosen = %r' %(kc, list(map(lambda x: betas[x], filter(lambda y: aggni[y] == kc, range(10))))))
+  print('@@@ Aggregate Nuclear Index = %d, β chosen = %r'
+        % (kc,
+           list(
+               map(lambda x: betas[x],
+                   filter(lambda y: aggni[y] == kc, range(10))))))
 
 
 def main():
-  if not(os.path.exists(outputDir)):
+  if not (os.path.exists(outputDir)):
     os.makedirs(outputDir)
-  if not(os.path.exists('%s/dep' % outputDir)):
+  if not (os.path.exists('%s/dep' % outputDir)):
     os.makedirs('%s/dep' % outputDir)
-  if not(os.path.exists('%s/ni' % outputDir)):
+  if not (os.path.exists('%s/ni' % outputDir)):
     os.makedirs('%s/ni' % outputDir)
   print('Reading edges...')
   edges = readEdges(efile)
@@ -123,7 +132,7 @@ def main():
   cores = nx.core_number(G)
   dumpData(cores, '%s/cores.json' % (outputDir))
   print('Done!\nGetting dependency values...',)
-  getDep(G, cores, outputDir) 
+  getDep(G, cores, outputDir)
 
 
 if __name__ == '__main__':
