@@ -22,4 +22,4 @@ For example,
 python3 init.py './dataset/ca-AstroPh.txt'
 ```
 
-This will output the Nuclear-Index graph in the folder './out/dataset/ca-AstroPh.txt/ni'
+This will output the Nuclear-Index graph in the folder `'./out/dataset/ca-AstroPh.txt/ni'`

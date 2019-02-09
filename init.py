@@ -10,6 +10,7 @@ from collections import Counter
 efile = './dummyDataset/edges.csv'
 if len(argv) > 1:
   efile = argv[1]
+dataset = os.path.splitext(os.path.basename(efile))[0]
 outputDir = './out/%s' % (efile)
 
 
@@ -60,6 +61,8 @@ def lineGraphs(y, label, title='line-graph', filename='line.png', clf=True):
     plt.plot(xe, y[i], '.-', label='B=%.1f' % (label[i]))
   plt.legend()
   plt.title(title)
+  plt.xlabel('G_k (k-core)')
+  plt.ylabel('NI(G_k, dep(i, β)')
   plt.savefig(filename)
   if clf:
     plt.clf()
@@ -105,7 +108,8 @@ def getDep(G, cores, outputDir):
     print('Nuclear Index = ', mni)
     ni.append(nib)
     aggni.append(mni)
-  lineGraphs(ni, betas, 'NuclearIndex', '%s/ni/graph.png' % (outputDir))
+  lineGraphs(ni, betas, '%s NuclearIndex' % (dataset),
+             '%s/ni/graph.png' % (outputDir))
   cnt = Counter(aggni)
   kc = (cnt.most_common(1))[0][0]
   print('@@@ Aggregate Nuclear Index = %d, β chosen = %r'
