@@ -6,10 +6,16 @@ import json
 import os
 import re
 from collections import Counter
+import plotly.offline as py
+import plotly.graph_objs as go
 
 efile = './dummyDataset/edges.csv'
+plotlykey = 'LuM1q5YsmH2ItxMWeE8I'
 if len(argv) > 1:
   efile = argv[1]
+corenum = None
+if len(argv) > 2:
+  corenum = int(argv[2])
 dataset = os.path.splitext(os.path.basename(efile))[0]
 outputDir = './out/%s' % (efile)
 
@@ -68,11 +74,28 @@ def lineGraphs(y, label, title='line-graph', filename='line.png', clf=True):
     plt.clf()
 
 
+def plotlyGraphs(y, label, title='line-graph', filename='line.png', clf=True):
+  layout = go.Layout(
+    title=title,
+    xaxis=dict(
+        title='G_k (k-core)s',
+    ),
+    yaxis=dict(
+        title='NI (G_k, dep(i, β))',
+    )
+)
+  x = list(range(len(y[0])))
+  trace = list(map(lambda i: go.Scatter(x=x, y=y[i], name=label[i]), list(range(len(y)))))
+  fig = go.Figure(data=trace, layout=layout)
+  py.plot(fig, filename=filename)
+
+
 def getDep(G, cores, outputDir):
   betas = list(map(lambda x: x / 10, list(range(11))))
   nodes = G.nodes()
   edges = G.edges()
   k_max = max(cores.values())
+  print('k_max = %d' %(k_max))
   ni = []
   aggni = []
   for beta in betas:
@@ -89,7 +112,8 @@ def getDep(G, cores, outputDir):
         depBetaK[v] += len(nbrs) + beta * sum(
             list(map(lambda u: depBeta[k - 1][u], nbrs)))
       depBeta.append(depBetaK)
-    # dumpData(depBeta, '%s/dep/%d.json' % (outputDir, beta * 10))
+    # print(list(map(lambda x: list(x.values()) , depBeta)))
+    dumpData(list(map(lambda x: list(x.values()) , depBeta)), '%s/dep/%d.json' % (outputDir, beta * 10))
     sumDep = sum(depBeta[-1].values())
     vk_1 = nodes
     ek_1 = edges
@@ -108,15 +132,19 @@ def getDep(G, cores, outputDir):
     print('Nuclear Index = ', mni)
     ni.append(nib)
     aggni.append(mni)
-  lineGraphs(ni, betas, '%s NuclearIndex' % (dataset),
-             '%s/ni/graph.png' % (outputDir))
+    # print('# nodes in the core with max NI = %d; # nodes in the core, with max k = %d' % (len(list(filter(lambda x: cores[x] >= mni, nodes))), len(list(filter(lambda x: cores[x] == k_max, nodes)))))
+  # lineGraphs(ni, betas, '%s NuclearIndex' % (dataset),
+  #            '%s/ni/graph.png' % (outputDir))
+  plotlyGraphs(ni, betas, '%s NuclearIndex' % (dataset),
+             '%s/ni/graph.html' % (outputDir))
   cnt = Counter(aggni)
   kc = (cnt.most_common(1))[0][0]
-  print('@@@ Aggregate Nuclear Index = %d, β chosen = %r'
-        % (kc,
-           list(
+  chosenBs = list(
                map(lambda x: betas[x],
-                   filter(lambda y: aggni[y] == kc, range(10))))))
+                   filter(lambda y: aggni[y] == kc, range(10))))
+  print('@@@ k_C = %d, β chosen = %r' % (kc, chosenBs[len(chosenBs) // 2]))
+  nucleus = nx.k_core(G, kc)
+  print('N(GC) = %d, E(GC) = %d' %(nucleus.number_of_nodes(), nucleus.number_of_edges()))
 
 
 def main():
@@ -131,9 +159,19 @@ def main():
   G = nx.Graph()
   print('Done!\nAdding edges...')
   G.add_edges_from(edges)
-  print('Done!\nCalculating core values...')
+  print('Done!\nCalculating core values after removing self-loops...')
   G.remove_edges_from(nx.selfloop_edges(G))
+  print('# nodes = %d, # edges = %d' %(G.number_of_nodes(), G.number_of_edges()))
   cores = nx.core_number(G)
+  if corenum is not None:
+    queryg = nx.k_core(G, corenum)
+    print('kth core contains %d nodes and %d edges' % (queryg.number_of_nodes(), queryg.number_of_edges()))
+  coreFreq = Counter(cores.values())
+  cdf = []; s = 0
+  for x in range(max(coreFreq) - 1, -1, -1):
+    s = s + coreFreq[x]
+    cdf.append(s)
+  print(list(reversed(cdf)))
   dumpData(cores, '%s/cores.json' % (outputDir))
   print('Done!\nGetting dependency values...',)
   getDep(G, cores, outputDir)
