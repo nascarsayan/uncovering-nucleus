@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import plotly.offline as py
 import plotly.graph_objs as go
 
+MAX = 999999
 EDGES_FILE = './dummyDataset/edges.csv'
 if len(argv) > 1:
   EDGES_FILE = argv[1]
@@ -113,9 +114,81 @@ def getDep(G, cores, OUTPUT_DIR):
   chosenBs = list(
       map(lambda x: betas[x], filter(lambda y: aggni[y] == kc, range(10))))
   print('@@@ k_C = %d, β chosen = %r' % (kc, chosenBs[len(chosenBs) // 2]))
-  nucleus = nx.k_core(G, kc)
-  print('N(GC) = %d, E(GC) = %d' %(nucleus.number_of_nodes(), nucleus.number_of_edges()))
+  return kc, aggni
+  # nucleus = nx.k_core(G, kc)
+  # print('N(GC) = %d, E(GC) = %d' %(nucleus.number_of_nodes(), nucleus.number_of_edges()))
 
+# ======= Centralities =============
+
+def printBetweennessCentralityPercentile(G, coreSubgraph):
+  betweennessCentrality=nx.algorithms.centrality.betweenness_centrality(G)
+
+  coreMin_bc = MAX
+  for i in coreSubgraph.nodes():
+    if coreMin_bc > betweennessCentrality[i]:
+      coreMin_bc = betweennessCentrality[i]
+
+  count_bc = 0
+  for i in betweennessCentrality.values():
+      if coreMin_bc < i:
+          count_bc += 1;
+
+  percentile_bc = (count_bc * 100) / len(betweennessCentrality)
+  print("Betweenness Centrality of core nodes is in top %d percent" %(percentile_bc))
+
+
+def printClosenessCentralityPercentile(G, coreSubgraph):
+  closenessCentrality=nx.algorithms.centrality.betweenness_centrality(G)
+
+  coreMin_cc = MAX
+  for i in coreSubgraph.nodes():
+    if coreMin_cc > closenessCentrality[i]:
+      coreMin_cc = closenessCentrality[i]
+
+  count_cc = 0
+  for i in closenessCentrality.values():
+      if coreMin_cc < i:
+          count_cc += 1;
+
+  percentile_cc = (count_cc * 100) / len(closenessCentrality)
+  print("Closeness Centrality of core nodes is in top %d percent" %(percentile_cc))
+
+
+def printEigenvectorCentralityPercentile(G, coreSubgraph):
+  eigenvectorCentrality=nx.algorithms.centrality.betweenness_centrality(G)
+
+  coreMin_ec = MAX
+  for i in coreSubgraph.nodes():
+    if coreMin_ec > eigenvectorCentrality[i]:
+      coreMin_ec = eigenvectorCentrality[i]
+
+  count_ec = 0
+  for i in eigenvectorCentrality.values():
+      if coreMin_ec < i:
+          count_ec += 1;
+
+  percentile_ec = (count_ec * 100) / len(eigenCentrality)
+  print("Eigenvector Centrality of core nodes is in top %d percent" %(percentile_ec))
+
+
+def printKatzCentralityPercentile(G, coreSubgraph):
+  katzCentrality=nx.algorithms.centrality.betweenness_centrality(G)
+
+  coreMin_kc = MAX
+  for i in coreSubgraph.nodes():
+    if coreMin_kc > katzCentrality[i]:
+      coreMin_kc = katzCentrality[i]
+
+  count_kc = 0
+  for i in katzCentrality.values():
+      if coreMin_kc < i:
+          count_kc += 1;
+
+  percentile_kc = (count_kc * 100) / len(katzCentrality)
+  print("Katz Centrality of core nodes is in top %d percent" %(percentile_kc))
+
+
+# =========== Plot Graph functions  =============
 
 def drawGraph(G, figname='graph.png'):
   nx.draw(G, with_labels=True, font_weight='bold')
@@ -194,12 +267,16 @@ def main():
   dumpData(cores, '%s/cores.json' % (OUTPUT_DIR))
 
   print('Getting dependency values...',)
-  getDep(G, cores, OUTPUT_DIR)
+  kc, aggni = getDep(G, cores, OUTPUT_DIR)
+  nucleus = nx.k_core(G, kc)
+  print('N(GC) = %d, E(GC) = %d' %(nucleus.number_of_nodes(), nucleus.number_of_edges()))
 
-  # betweennessCentrality=nx.algorithms.centrality.betweenness_centrality(G)
-  # eigenvectorCentrality=nx.algorithms.centrality.eigenvector_centrality(G)
-  # katzCentrality=nx.algorithms.centrality.katz_centrality(G)
-  # closenessCentrality=nx.algorithms.centrality.closeness_centrality(G)
+  coreSubgraph = nx.k_core(G, kc)
+  printBetweennessCentralityPercentile(G, coreSubgraph)
+  printClosenessCentralityPercentile(G, coreSubgraph)
+  printKatzCentralityPercentile(G, coreSubgraph)
+  printBetweennessCentralityPercentile(G, coreSubgraph)
+
 
 if __name__ == '__main__':
   main()
