@@ -155,8 +155,12 @@ def plotlyCentralities(cens, G, cores, kc, folder='./'):
     h1 = [vals[k] for k in vals.keys() if cores[k] < kc]
     h2 = [vals[k] for k in vals.keys() if cores[k] >= kc]
     layout = go.Layout(
-        title='%s Distribution' % (cen['name']),
-        barmode='stack',
+      title='%s Distribution' % (cen['name']),
+      barmode='stack',
+      yaxis=dict(
+        type='log',
+        autorange=True
+      )
     )
     data = [
         go.Histogram(x=h1, name='Outside K_C core'),
