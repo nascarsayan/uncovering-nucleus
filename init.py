@@ -1,6 +1,6 @@
-# =================================================== 
-# ===================== Import ====================== 
-# =================================================== 
+# ===================================================
+# ===================== Import ======================
+# ===================================================
 import os
 from sys import argv
 import re
@@ -11,6 +11,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import plotly.offline as py
 import plotly.graph_objs as go
+from plotly import tools
 
 MAX = 999999
 EDGES_FILE = './dummyDataset/edges.csv'
@@ -24,9 +25,10 @@ if len(argv) > 2:
   core_num = int(argv[2])
 DATASET = os.path.splitext(os.path.basename(EDGES_FILE))[0]
 
-# =================================================== 
-# ==================== Functions ==================== 
-# =================================================== 
+# ===================================================
+# ==================== Functions ====================
+# ===================================================
+
 
 def dumpData(data, fname):
   with open(fname, 'w') as fp:
@@ -45,12 +47,12 @@ def readEdges(fname):
       if ',' in line:
         delim = ','
       rows.append((list(
-        map(lambda x: int(x.strip()), re.split(delim, line.strip()))))[:2])
+          map(lambda x: int(x.strip()), re.split(delim, line.strip()))))[:2])
       for line in txtfile:
         try:
           rows.append((list(
-            map(lambda x: int(x.strip()), re.split(delim,
-              line.strip()))))[:2])
+              map(lambda x: int(x.strip()), re.split(delim,
+                                                     line.strip()))))[:2])
         except Exception as _:
           pass
   else:
@@ -67,7 +69,7 @@ def getDep(G, cores, OUTPUT_DIR):
   nodes = G.nodes()
   edges = G.edges()
   k_max = max(cores.values())
-  print('k_max = %d' %(k_max))
+  print('k_max = %d' % (k_max))
   ni = []
   aggni = []
   for beta in betas:
@@ -85,7 +87,9 @@ def getDep(G, cores, OUTPUT_DIR):
             list(map(lambda u: depBeta[k - 1][u], nbrs)))
         depBeta.append(depBetaK)
     # print(list(map(lambda x: list(x.values()) , depBeta)))
-    dumpData(list(map(lambda x: list(x.values()) , depBeta)), '%s/dep/%d.json' % (OUTPUT_DIR, beta * 10))
+    dumpData(
+        list(map(lambda x: list(x.values()), depBeta)),
+        '%s/dep/%d.json' % (OUTPUT_DIR, beta * 10))
     sumDep = sum(depBeta[-1].values())
     vk_1 = nodes
     ek_1 = edges
@@ -108,7 +112,7 @@ def getDep(G, cores, OUTPUT_DIR):
   # lineGraphs(ni, betas, '%s NuclearIndex' % (DATASET),
   #            '%s/ni/graph.png' % (OUTPUT_DIR))
   plotlyGraphs(ni, betas, '%s NuclearIndex' % (DATASET),
-      '%s/ni/graph.html' % (OUTPUT_DIR))
+               '%s/ni/graph.html' % (OUTPUT_DIR))
   cnt = Counter(aggni)
   kc = (cnt.most_common(1))[0][0]
   chosenBs = list(
@@ -118,77 +122,9 @@ def getDep(G, cores, OUTPUT_DIR):
   # nucleus = nx.k_core(G, kc)
   # print('N(GC) = %d, E(GC) = %d' %(nucleus.number_of_nodes(), nucleus.number_of_edges()))
 
-# ======= Centralities =============
-
-def printBetweennessCentralityPercentile(G, coreSubgraph):
-  betweennessCentrality=nx.algorithms.centrality.betweenness_centrality(G)
-
-  coreMin_bc = MAX
-  for i in coreSubgraph.nodes():
-    if coreMin_bc > betweennessCentrality[i]:
-      coreMin_bc = betweennessCentrality[i]
-
-  count_bc = 0
-  for i in betweennessCentrality.values():
-      if coreMin_bc < i:
-          count_bc += 1;
-
-  percentile_bc = (count_bc * 100) / len(betweennessCentrality)
-  print("Betweenness Centrality of core nodes is in top %d percent" %(percentile_bc))
-
-
-def printClosenessCentralityPercentile(G, coreSubgraph):
-  closenessCentrality=nx.algorithms.centrality.betweenness_centrality(G)
-
-  coreMin_cc = MAX
-  for i in coreSubgraph.nodes():
-    if coreMin_cc > closenessCentrality[i]:
-      coreMin_cc = closenessCentrality[i]
-
-  count_cc = 0
-  for i in closenessCentrality.values():
-      if coreMin_cc < i:
-          count_cc += 1;
-
-  percentile_cc = (count_cc * 100) / len(closenessCentrality)
-  print("Closeness Centrality of core nodes is in top %d percent" %(percentile_cc))
-
-
-def printEigenvectorCentralityPercentile(G, coreSubgraph):
-  eigenvectorCentrality=nx.algorithms.centrality.betweenness_centrality(G)
-
-  coreMin_ec = MAX
-  for i in coreSubgraph.nodes():
-    if coreMin_ec > eigenvectorCentrality[i]:
-      coreMin_ec = eigenvectorCentrality[i]
-
-  count_ec = 0
-  for i in eigenvectorCentrality.values():
-      if coreMin_ec < i:
-          count_ec += 1;
-
-  percentile_ec = (count_ec * 100) / len(eigenCentrality)
-  print("Eigenvector Centrality of core nodes is in top %d percent" %(percentile_ec))
-
-
-def printKatzCentralityPercentile(G, coreSubgraph):
-  katzCentrality=nx.algorithms.centrality.betweenness_centrality(G)
-
-  coreMin_kc = MAX
-  for i in coreSubgraph.nodes():
-    if coreMin_kc > katzCentrality[i]:
-      coreMin_kc = katzCentrality[i]
-
-  count_kc = 0
-  for i in katzCentrality.values():
-      if coreMin_kc < i:
-          count_kc += 1;
-
-  percentile_kc = (count_kc * 100) / len(katzCentrality)
-  print("Katz Centrality of core nodes is in top %d percent" %(percentile_kc))
-
 
 # =========== Plot Graph functions  =============
+
 
 def drawGraph(G, figname='graph.png'):
   nx.draw(G, with_labels=True, font_weight='bold')
@@ -213,22 +149,37 @@ def lineGraphs(y, label, title='line-graph', filename='line.png', clf=True):
 def plotlyGraphs(y, label, title='line-graph', filename='line.png', clf=True):
   layout = go.Layout(
       title=title,
-      xaxis=dict(
-        title='G_k (k-core)s',
-        ),
-      yaxis=dict(
-        title='NI (G_k, dep(i, β))',
-        )
-      )
+      xaxis=dict(title='G_k (k-core)s',),
+      yaxis=dict(title='NI (G_k, dep(i, β))',))
   x = list(range(len(y[0])))
-  trace = list(map(lambda i: go.Scatter(x=x, y=y[i], name=label[i]), list(range(len(y)))))
+  trace = list(
+      map(lambda i: go.Scatter(x=x, y=y[i], name=label[i]),
+          list(range(len(y)))))
   fig = go.Figure(data=trace, layout=layout)
   py.plot(fig, filename=filename)
+
+
+def plotlyCentralities(cens, G, cores, kc, folder='./'):
+  for cen in cens:
+    vals = cen['fn'](G)
+    h1 = [vals[k] for k in vals.keys() if cores[k] < kc]
+    h2 = [vals[k] for k in vals.keys() if cores[k] >= kc]
+    layout = go.Layout(
+        title='%s Distribution' % (cen['name']),
+        barmode='stack',
+    )
+    data = [
+        go.Histogram(x=h1, name='Outside K_C core'),
+        go.Histogram(x=h2, name='Inside K_C core')
+    ]
+    fig = go.Figure(data=data, layout=layout)
+    py.plot(fig, filename='%s/%s.html' % (folder, cen['name']))
 
 
 # ===================================================
 # ================== Main Function ==================
 # ===================================================
+
 
 def main():
   if not (os.path.exists(OUTPUT_DIR)):
@@ -249,16 +200,19 @@ def main():
   print('Calculating core values after removing self-loops...')
   G.remove_edges_from(nx.selfloop_edges(G))
 
-  print('# nodes = %d, # edges = %d' %(G.number_of_nodes(), G.number_of_edges()))
+  print(
+      '# nodes = %d, # edges = %d' % (G.number_of_nodes(), G.number_of_edges()))
 
   cores = nx.core_number(G)
 
   if core_num is not None:
     query_subgraph = nx.k_core(G, core_num)
-    print('kth core contains %d nodes and %d edges' % (query_subgraph.number_of_nodes(), query_subgraph.number_of_edges()))
+    print('kth core contains %d nodes and %d edges' %
+          (query_subgraph.number_of_nodes(), query_subgraph.number_of_edges()))
 
-  coreFreq = Counter(cores.values())        # coreFreq = {core_num: number_of_nodes}
-  coreDensityFunc = []; s = 0
+  coreFreq = Counter(cores.values())  # coreFreq = {core_num: number_of_nodes}
+  coreDensityFunc = []
+  s = 0
   for x in range(max(coreFreq) - 1, -1, -1):
     s = s + coreFreq[x]
     coreDensityFunc.append(s)
@@ -267,15 +221,26 @@ def main():
   dumpData(cores, '%s/cores.json' % (OUTPUT_DIR))
 
   print('Getting dependency values...',)
-  kc, aggni = getDep(G, cores, OUTPUT_DIR)
+  kc, _ = getDep(G, cores, OUTPUT_DIR)
   nucleus = nx.k_core(G, kc)
-  print('N(GC) = %d, E(GC) = %d' %(nucleus.number_of_nodes(), nucleus.number_of_edges()))
+  print('N(GC) = %d, E(GC) = %d' % (nucleus.number_of_nodes(),
+                                    nucleus.number_of_edges()))
 
-  coreSubgraph = nx.k_core(G, kc)
-  printBetweennessCentralityPercentile(G, coreSubgraph)
-  printClosenessCentralityPercentile(G, coreSubgraph)
-  printKatzCentralityPercentile(G, coreSubgraph)
-  printBetweennessCentralityPercentile(G, coreSubgraph)
+  cenf = nx.algorithms.centrality
+  cens = [{
+      'fn': cenf.degree_centrality,
+      'name': 'DegreeCentrality'
+  }, {
+      'fn': cenf.closeness_centrality,
+      'name': 'ClosenessCentrality'
+  }, {
+      'fn': cenf.betweenness_centrality,
+      'name': 'BetweennessCentrality'
+  }, {
+      'fn': cenf.eigenvector_centrality,
+      'name': 'EigenvectorCentrality'
+  }]
+  plotlyCentralities(cens, G, cores, kc, '%s/ni/' % (OUTPUT_DIR))
 
 
 if __name__ == '__main__':
