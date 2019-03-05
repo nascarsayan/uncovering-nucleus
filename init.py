@@ -1,7 +1,7 @@
 import networkx as nx
 import csv
 import matplotlib.pyplot as plt
-from sys import argv
+from sys import argv, exit
 import json
 import os
 import re
@@ -10,7 +10,6 @@ import plotly.offline as py
 import plotly.graph_objs as go
 
 efile = './dummyDataset/edges.csv'
-plotlykey = 'LuM1q5YsmH2ItxMWeE8I'
 if len(argv) > 1:
   efile = argv[1]
 corenum = None
@@ -170,6 +169,9 @@ def plotlyCentralities(cens, G, cores, kc, folder='./'):
     py.plot(fig, filename='%s/%s.html' % (folder, cen['name']))
 
 def main():
+  if not os.path.exists('%s/.plotly' % (os.path.expanduser('~'))):
+    print('Plotly credentials not present. Please set up plotly.\nDetails: "https://plot.ly/python/getting-started/"')
+    exit(1)
   if not (os.path.exists(outputDir)):
     os.makedirs(outputDir)
   if not (os.path.exists('%s/dep' % outputDir)):
