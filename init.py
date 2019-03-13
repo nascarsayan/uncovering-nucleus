@@ -156,7 +156,11 @@ def plotlyCentralities(cens, G, cores, kc, folder='./'):
     layout = go.Layout(
       title='%s Distribution' % (cen['name']),
       barmode='stack',
+      xaxis=dict(
+        name='Centrality Value'
+      ),
       yaxis=dict(
+        name='Log Frequency',
         type='log',
         autorange=True
       )
