@@ -134,8 +134,8 @@ def getDep(G, cores, outputDir):
     # print('# nodes in the core with max NI = %d; # nodes in the core, with max k = %d' % (len(list(filter(lambda x: cores[x] >= mni, nodes))), len(list(filter(lambda x: cores[x] == k_max, nodes)))))
   # lineGraphs(ni, betas, '%s NuclearIndex' % (dataset),
   #            '%s/ni/graph.png' % (outputDir))
-  plotlyGraphs(ni, betas, '%s NuclearIndex' % (dataset),
-             '%s/ni/graph.html' % (outputDir))
+  # plotlyGraphs(ni, betas, '%s NuclearIndex' % (dataset),
+            #  '%s/ni/graph.html' % (outputDir))
   cnt = Counter(aggni)
   kc = (cnt.most_common(1))[0][0]
   chosenBs = list(
@@ -147,26 +147,31 @@ def getDep(G, cores, outputDir):
   return kc
 
 def plotlyCentralities(cens, G, cores, kc, folder='./'):
+  quants = {}
   for cen in cens:
     print('Calculating %s' %(cen['name']))
-    vals = cen['fn'](G)
-    print('Plotting')
-    h1 = [vals[k] for k in vals.keys() if cores[k] < kc]
-    h2 = [vals[k] for k in vals.keys() if cores[k] >= kc]
-    layout = go.Layout(
-      title='%s Distribution' % (cen['name']),
-      barmode='stack',
-      yaxis=dict(
-        type='log',
-        autorange=True
-      )
-    )
-    data = [
-        go.Histogram(x=h1, name='Outside K_C core'),
-        go.Histogram(x=h2, name='Inside K_C core')
-    ]
-    fig = go.Figure(data=data, layout=layout)
-    py.plot(fig, filename='%s/%s.html' % (folder, cen['name']))
+    nodes = [x[0] for x in sorted((cen['fn'](G)).items(), key=lambda k: -k[1])]
+    fil = len(list(filter(lambda x: cores[x] >= kc, nodes[:20])))
+    print(fil)
+    quants[cen['name']] = fil
+  dumpData(quants, '%s/top20.json' % folder)
+    # print('Plotting')
+    # h1 = [vals[k] for k in vals.keys() if cores[k] < kc]
+    # h2 = [vals[k] for k in vals.keys() if cores[k] >= kc]
+    # layout = go.Layout(
+    #   title='%s Distribution' % (cen['name']),
+    #   barmode='stack',
+    #   yaxis=dict(
+    #     type='log',
+    #     autorange=True
+    #   )
+    # )
+    # data = [
+    #     go.Histogram(x=h1, name='Outside K_C core'),
+    #     go.Histogram(x=h2, name='Inside K_C core')
+    # ]
+    # fig = go.Figure(data=data, layout=layout)
+    # py.plot(fig, filename='%s/%s.html' % (folder, cen['name']))
 
 def main():
   if not os.path.exists('%s/.plotly' % (os.path.expanduser('~'))):
@@ -213,7 +218,7 @@ def main():
       'fn': cenf.eigenvector_centrality,
       'name': 'EigenvectorCentrality'
   }]
-  # plotlyCentralities(cens, G, cores, kc, '%s/ni/' % (outputDir))
+  plotlyCentralities(cens, G, cores, kc, '%s/ni/' % (outputDir))
 
 
 if __name__ == '__main__':
