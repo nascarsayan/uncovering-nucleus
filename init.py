@@ -99,21 +99,21 @@ def getDep(G, cores, outputDir):
   aggni = []
   for beta in betas:
     print('+++ β = %0.1f' % (beta))
-    depBeta = [{v: 0 for v in nodes}]
+    depBeta = {v: 0 for v in nodes}
     for k in range(1, k_max + 1):
       depBetaK = {}
       for v in nodes:
-        depBetaK[v] = depBeta[k - 1][v]
+        depBetaK[v] = depBeta[v]
         if k > cores[v]:
           continue
         nbrs = list(
             filter(lambda u: cores[u] == k, list(nx.all_neighbors(G, v))))
         depBetaK[v] += len(nbrs) + beta * sum(
-            list(map(lambda u: depBeta[k - 1][u], nbrs)))
-      depBeta.append(depBetaK)
+            list(map(lambda u: depBeta [u], nbrs)))
+      depBeta = depBetaK
     # print(list(map(lambda x: list(x.values()) , depBeta)))
-    dumpData(list(map(lambda x: list(x.values()) , depBeta)), '%s/dep/%d.json' % (outputDir, beta * 10))
-    sumDep = sum(depBeta[-1].values())
+    # dumpData(list(map(lambda x: list(x.values()) , depBeta)), '%s/dep/%d.json' % (outputDir, beta * 10))
+    sumDep = sum(depBeta.values())
     vk_1 = nodes
     ek_1 = edges
     nib = [0]
@@ -121,12 +121,12 @@ def getDep(G, cores, outputDir):
       vk = list(filter(lambda u: cores[u] > k, vk_1))
       ek = list(filter(lambda e: cores[e[0]] > k and cores[e[1]] > k, ek_1))
       nibk = (1 / len(vk_1)) * (len(ek) / (len(vk) * (len(vk) - 1))) * (
-          sum(list(map(lambda i: depBeta[-1][i], vk))) / sumDep)
+          sum(list(map(lambda i: depBeta[i], vk))) / sumDep)
       nib.append(nibk)
       vk_1 = vk
       ek_1 = ek
     nib += [0]
-    dumpData(nib, '%s/ni/%d.json' % (outputDir, beta * 10))
+    # dumpData(nib, '%s/ni/%d.json' % (outputDir, beta * 10))
     mni = nib.index(max(nib))
     print('Nuclear Index = ', mni)
     ni.append(nib)
@@ -156,11 +156,7 @@ def plotlyCentralities(cens, G, cores, kc, folder='./'):
     layout = go.Layout(
       title='%s Distribution' % (cen['name']),
       barmode='stack',
-      xaxis=dict(
-        name='Centrality Value'
-      ),
       yaxis=dict(
-        name='Log Frequency',
         type='log',
         autorange=True
       )
@@ -217,7 +213,7 @@ def main():
       'fn': cenf.eigenvector_centrality,
       'name': 'EigenvectorCentrality'
   }]
-  plotlyCentralities(cens, G, cores, kc, '%s/ni/' % (outputDir))
+  # plotlyCentralities(cens, G, cores, kc, '%s/ni/' % (outputDir))
 
 
 if __name__ == '__main__':
