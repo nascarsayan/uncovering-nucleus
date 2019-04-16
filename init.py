@@ -1,13 +1,13 @@
 import networkx as nx
 import csv
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from sys import argv, exit
 import json
 import os
 import re
 from collections import Counter
-import plotly.offline as py
-import plotly.graph_objs as go
+# import plotly.offline as py
+# import plotly.graph_objs as go
 
 efile = './dummyDataset/edges.csv'
 if len(argv) > 1:
@@ -53,40 +53,40 @@ def readEdges(fname):
   return rows
 
 
-def drawGraph(G, figname='graph.png'):
-  nx.draw(G, with_labels=True, font_weight='bold')
-  plt.savefig(figname)
-  plt.clf()
+# def drawGraph(G, figname='graph.png'):
+#   nx.draw(G, with_labels=True, font_weight='bold')
+#   plt.savefig(figname)
+#   plt.clf()
 
 
-def lineGraphs(y, label, title='line-graph', filename='line.png', clf=True):
-  plt.ylim(0, max(list(map(lambda ye: max(ye), y))))
-  xe = list(range(len(y[0])))
-  for i in range(0, 12, 2):
-    plt.plot(xe, y[i], '.-', label='B=%.1f' % (label[i]))
-  plt.legend()
-  plt.title(title)
-  plt.xlabel('G_k (k-core)')
-  plt.ylabel('NI (G_k, dep(i, β))')
-  plt.savefig(filename)
-  if clf:
-    plt.clf()
+# def lineGraphs(y, label, title='line-graph', filename='line.png', clf=True):
+#   plt.ylim(0, max(list(map(lambda ye: max(ye), y))))
+#   xe = list(range(len(y[0])))
+#   for i in range(0, 12, 2):
+#     plt.plot(xe, y[i], '.-', label='B=%.1f' % (label[i]))
+#   plt.legend()
+#   plt.title(title)
+#   plt.xlabel('G_k (k-core)')
+#   plt.ylabel('NI (G_k, dep(i, β))')
+#   plt.savefig(filename)
+#   if clf:
+#     plt.clf()
 
 
-def plotlyGraphs(y, label, title='line-graph', filename='line.png', clf=True):
-  layout = go.Layout(
-    title=title,
-    xaxis=dict(
-        title='G_k (k-core)s',
-    ),
-    yaxis=dict(
-        title='NI (G_k, dep(i, β))',
-    )
-)
-  x = list(range(len(y[0])))
-  trace = list(map(lambda i: go.Scatter(x=x, y=y[i], name=label[i]), list(range(len(y)))))
-  fig = go.Figure(data=trace, layout=layout)
-  py.plot(fig, filename=filename)
+# def plotlyGraphs(y, label, title='line-graph', filename='line.png', clf=True):
+#   layout = go.Layout(
+#     title=title,
+#     xaxis=dict(
+#         title='G_k (k-core)s',
+#     ),
+#     yaxis=dict(
+#         title='NI (G_k, dep(i, β))',
+#     )
+# )
+#   x = list(range(len(y[0])))
+#   trace = list(map(lambda i: go.Scatter(x=x, y=y[i], name=label[i]), list(range(len(y)))))
+#   fig = go.Figure(data=trace, layout=layout)
+#   py.plot(fig, filename=filename)
 
 
 def getDep(G, cores, outputDir):
@@ -148,13 +148,22 @@ def getDep(G, cores, outputDir):
 
 def plotlyCentralities(cens, G, cores, kc, folder='./'):
   quants = {}
+  k_max = max(cores.values())
   for cen in cens:
-    print('Calculating %s' %(cen['name']))
-    nodes = [x[0] for x in sorted((cen['fn'](G)).items(), key=lambda k: -k[1])]
-    fil = len(list(filter(lambda x: cores[x] >= kc, nodes[:20])))
-    print(fil)
-    quants[cen['name']] = fil
-  dumpData(quants, '%s/top20.json' % folder)
+    fname = '%s/%s.json' % (folder, cen['name'])
+    if not (os.path.exists(fname)):
+      print('Calculating %s' %(cen['name']))
+      nodes = [x[0] for x in sorted((cen['fn'](G)).items(), key=lambda k: -k[1])]
+      dumpData(nodes, fname)
+    else:
+      with open(fname) as fp:
+        nodes = json.load(fp)
+    num_nuc = len(list(filter(lambda x: cores[x] >= kc, nodes[:50])))
+    num_max = len(list(filter(lambda x: cores[x] >= k_max, nodes[:50])))
+    print(num_nuc, num_max)
+    quants[cen['name']] = { 'k_max' : num_max, 'k_c' : num_nuc }
+  quants['dataset'] = (((folder.split('/'))[-3]).split('.'))[0]
+  dumpData(quants, '%s/top50.json' % folder)
     # print('Plotting')
     # h1 = [vals[k] for k in vals.keys() if cores[k] < kc]
     # h2 = [vals[k] for k in vals.keys() if cores[k] >= kc]
@@ -200,7 +209,7 @@ def main():
   for x in range(max(coreFreq) - 1, -1, -1):
     s = s + coreFreq[x]
     cdf.append(s)
-  print(list(reversed(cdf)))
+  # print(list(reversed(cdf)))
   dumpData(cores, '%s/cores.json' % (outputDir))
   print('Done!\nGetting dependency values...',)
   kc = getDep(G, cores, outputDir)
