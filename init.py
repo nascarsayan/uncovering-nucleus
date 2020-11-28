@@ -1,32 +1,23 @@
-# =================================================== 
-# ===================== Import ====================== 
-# =================================================== 
-import os
-from sys import argv
-import re
-import csv
-import json
-from collections import Counter
 import networkx as nx
-import matplotlib.pyplot as plt
-import plotly.offline as py
-import plotly.graph_objs as go
+import csv
+# import matplotlib.pyplot as plt
+from sys import argv, exit
+import json
+import os
+import re
+from collections import Counter
+# import plotly.offline as py
+# import plotly.graph_objs as go
 
-MAX = 999999
-EDGES_FILE = './dummyDataset/edges.csv'
+efile = './dummyDataset/edges.csv'
 if len(argv) > 1:
-  EDGES_FILE = argv[1]
-OUTPUT_DIR = './out/%s' % (EDGES_FILE)
-plotlykey = 'LuM1q5YsmH2ItxMWeE8I'
-
-core_num = None
+  efile = argv[1]
+corenum = None
 if len(argv) > 2:
-  core_num = int(argv[2])
-DATASET = os.path.splitext(os.path.basename(EDGES_FILE))[0]
+  corenum = int(argv[2])
+dataset = os.path.splitext(os.path.basename(efile))[0]
+outputDir = './out/%s' % (efile)
 
-# =================================================== 
-# ==================== Functions ==================== 
-# =================================================== 
 
 def dumpData(data, fname):
   with open(fname, 'w') as fp:
@@ -45,12 +36,12 @@ def readEdges(fname):
       if ',' in line:
         delim = ','
       rows.append((list(
-        map(lambda x: int(x.strip()), re.split(delim, line.strip()))))[:2])
+          map(lambda x: int(x.strip()), re.split(delim, line.strip()))))[:2])
       for line in txtfile:
         try:
           rows.append((list(
-            map(lambda x: int(x.strip()), re.split(delim,
-              line.strip()))))[:2])
+              map(lambda x: int(x.strip()), re.split(delim,
+                                                     line.strip()))))[:2])
         except Exception as _:
           pass
   else:
@@ -62,7 +53,43 @@ def readEdges(fname):
   return rows
 
 
-def getDep(G, cores, OUTPUT_DIR):
+# def drawGraph(G, figname='graph.png'):
+#   nx.draw(G, with_labels=True, font_weight='bold')
+#   plt.savefig(figname)
+#   plt.clf()
+
+
+# def lineGraphs(y, label, title='line-graph', filename='line.png', clf=True):
+#   plt.ylim(0, max(list(map(lambda ye: max(ye), y))))
+#   xe = list(range(len(y[0])))
+#   for i in range(0, 12, 2):
+#     plt.plot(xe, y[i], '.-', label='B=%.1f' % (label[i]))
+#   plt.legend()
+#   plt.title(title)
+#   plt.xlabel('G_k (k-core)')
+#   plt.ylabel('NI (G_k, dep(i, β))')
+#   plt.savefig(filename)
+#   if clf:
+#     plt.clf()
+
+
+# def plotlyGraphs(y, label, title='line-graph', filename='line.png', clf=True):
+#   layout = go.Layout(
+#     title=title,
+#     xaxis=dict(
+#         title='G_k (k-core)s',
+#     ),
+#     yaxis=dict(
+#         title='NI (G_k, dep(i, β))',
+#     )
+# )
+#   x = list(range(len(y[0])))
+#   trace = list(map(lambda i: go.Scatter(x=x, y=y[i], name=label[i]), list(range(len(y)))))
+#   fig = go.Figure(data=trace, layout=layout)
+#   py.plot(fig, filename=filename)
+
+
+def getDep(G, cores, outputDir):
   betas = list(map(lambda x: x / 10, list(range(11))))
   nodes = G.nodes()
   edges = G.edges()
@@ -72,21 +99,21 @@ def getDep(G, cores, OUTPUT_DIR):
   aggni = []
   for beta in betas:
     print('+++ β = %0.1f' % (beta))
-    depBeta = [{v: 0 for v in nodes}]
+    depBeta = {v: 0 for v in nodes}
     for k in range(1, k_max + 1):
       depBetaK = {}
       for v in nodes:
-        depBetaK[v] = depBeta[k - 1][v]
+        depBetaK[v] = depBeta[v]
         if k > cores[v]:
           continue
         nbrs = list(
             filter(lambda u: cores[u] == k, list(nx.all_neighbors(G, v))))
         depBetaK[v] += len(nbrs) + beta * sum(
-            list(map(lambda u: depBeta[k - 1][u], nbrs)))
-        depBeta.append(depBetaK)
+            list(map(lambda u: depBeta [u], nbrs)))
+      depBeta = depBetaK
     # print(list(map(lambda x: list(x.values()) , depBeta)))
-    dumpData(list(map(lambda x: list(x.values()) , depBeta)), '%s/dep/%d.json' % (OUTPUT_DIR, beta * 10))
-    sumDep = sum(depBeta[-1].values())
+    # dumpData(list(map(lambda x: list(x.values()) , depBeta)), '%s/dep/%d.json' % (outputDir, beta * 10))
+    sumDep = sum(depBeta.values())
     vk_1 = nodes
     ek_1 = edges
     nib = [0]
@@ -94,188 +121,113 @@ def getDep(G, cores, OUTPUT_DIR):
       vk = list(filter(lambda u: cores[u] > k, vk_1))
       ek = list(filter(lambda e: cores[e[0]] > k and cores[e[1]] > k, ek_1))
       nibk = (1 / len(vk_1)) * (len(ek) / (len(vk) * (len(vk) - 1))) * (
-          sum(list(map(lambda i: depBeta[-1][i], vk))) / sumDep)
+          sum(list(map(lambda i: depBeta[i], vk))) / sumDep)
       nib.append(nibk)
       vk_1 = vk
       ek_1 = ek
     nib += [0]
-    dumpData(nib, '%s/ni/%d.json' % (OUTPUT_DIR, beta * 10))
+    # dumpData(nib, '%s/ni/%d.json' % (outputDir, beta * 10))
     mni = nib.index(max(nib))
     print('Nuclear Index = ', mni)
     ni.append(nib)
     aggni.append(mni)
     # print('# nodes in the core with max NI = %d; # nodes in the core, with max k = %d' % (len(list(filter(lambda x: cores[x] >= mni, nodes))), len(list(filter(lambda x: cores[x] == k_max, nodes)))))
-  # lineGraphs(ni, betas, '%s NuclearIndex' % (DATASET),
-  #            '%s/ni/graph.png' % (OUTPUT_DIR))
-  plotlyGraphs(ni, betas, '%s NuclearIndex' % (DATASET),
-      '%s/ni/graph.html' % (OUTPUT_DIR))
+  # lineGraphs(ni, betas, '%s NuclearIndex' % (dataset),
+  #            '%s/ni/graph.png' % (outputDir))
+  # plotlyGraphs(ni, betas, '%s NuclearIndex' % (dataset),
+            #  '%s/ni/graph.html' % (outputDir))
   cnt = Counter(aggni)
   kc = (cnt.most_common(1))[0][0]
   chosenBs = list(
-      map(lambda x: betas[x], filter(lambda y: aggni[y] == kc, range(10))))
+               map(lambda x: betas[x],
+                   filter(lambda y: aggni[y] == kc, range(10))))
   print('@@@ k_C = %d, β chosen = %r' % (kc, chosenBs[len(chosenBs) // 2]))
-  return kc, aggni
-  # nucleus = nx.k_core(G, kc)
-  # print('N(GC) = %d, E(GC) = %d' %(nucleus.number_of_nodes(), nucleus.number_of_edges()))
-
-# ======= Centralities =============
-
-def printBetweennessCentralityPercentile(G, coreSubgraph):
-  betweennessCentrality=nx.algorithms.centrality.betweenness_centrality(G)
-
-  coreMin_bc = MAX
-  for i in coreSubgraph.nodes():
-    if coreMin_bc > betweennessCentrality[i]:
-      coreMin_bc = betweennessCentrality[i]
-
-  count_bc = 0
-  for i in betweennessCentrality.values():
-      if coreMin_bc < i:
-          count_bc += 1;
-
-  percentile_bc = (count_bc * 100) / len(betweennessCentrality)
-  print("Betweenness Centrality of core nodes is in top %d percent" %(percentile_bc))
-
-
-def printClosenessCentralityPercentile(G, coreSubgraph):
-  closenessCentrality=nx.algorithms.centrality.betweenness_centrality(G)
-
-  coreMin_cc = MAX
-  for i in coreSubgraph.nodes():
-    if coreMin_cc > closenessCentrality[i]:
-      coreMin_cc = closenessCentrality[i]
-
-  count_cc = 0
-  for i in closenessCentrality.values():
-      if coreMin_cc < i:
-          count_cc += 1;
-
-  percentile_cc = (count_cc * 100) / len(closenessCentrality)
-  print("Closeness Centrality of core nodes is in top %d percent" %(percentile_cc))
-
-
-def printEigenvectorCentralityPercentile(G, coreSubgraph):
-  eigenvectorCentrality=nx.algorithms.centrality.betweenness_centrality(G)
-
-  coreMin_ec = MAX
-  for i in coreSubgraph.nodes():
-    if coreMin_ec > eigenvectorCentrality[i]:
-      coreMin_ec = eigenvectorCentrality[i]
-
-  count_ec = 0
-  for i in eigenvectorCentrality.values():
-      if coreMin_ec < i:
-          count_ec += 1;
-
-  percentile_ec = (count_ec * 100) / len(eigenCentrality)
-  print("Eigenvector Centrality of core nodes is in top %d percent" %(percentile_ec))
-
-
-def printKatzCentralityPercentile(G, coreSubgraph):
-  katzCentrality=nx.algorithms.centrality.betweenness_centrality(G)
-
-  coreMin_kc = MAX
-  for i in coreSubgraph.nodes():
-    if coreMin_kc > katzCentrality[i]:
-      coreMin_kc = katzCentrality[i]
-
-  count_kc = 0
-  for i in katzCentrality.values():
-      if coreMin_kc < i:
-          count_kc += 1;
-
-  percentile_kc = (count_kc * 100) / len(katzCentrality)
-  print("Katz Centrality of core nodes is in top %d percent" %(percentile_kc))
-
-
-# =========== Plot Graph functions  =============
-
-def drawGraph(G, figname='graph.png'):
-  nx.draw(G, with_labels=True, font_weight='bold')
-  plt.savefig(figname)
-  plt.clf()
-
-
-def lineGraphs(y, label, title='line-graph', filename='line.png', clf=True):
-  plt.ylim(0, max(list(map(lambda ye: max(ye), y))))
-  xe = list(range(len(y[0])))
-  for i in range(0, 12, 2):
-    plt.plot(xe, y[i], '.-', label='B=%.1f' % (label[i]))
-  plt.legend()
-  plt.title(title)
-  plt.xlabel('G_k (k-core)')
-  plt.ylabel('NI (G_k, dep(i, β))')
-  plt.savefig(filename)
-  if clf:
-    plt.clf()
-
-
-def plotlyGraphs(y, label, title='line-graph', filename='line.png', clf=True):
-  layout = go.Layout(
-      title=title,
-      xaxis=dict(
-        title='G_k (k-core)s',
-        ),
-      yaxis=dict(
-        title='NI (G_k, dep(i, β))',
-        )
-      )
-  x = list(range(len(y[0])))
-  trace = list(map(lambda i: go.Scatter(x=x, y=y[i], name=label[i]), list(range(len(y)))))
-  fig = go.Figure(data=trace, layout=layout)
-  py.plot(fig, filename=filename)
-
-
-# ===================================================
-# ================== Main Function ==================
-# ===================================================
-
-def main():
-  if not (os.path.exists(OUTPUT_DIR)):
-    os.makedirs(OUTPUT_DIR)
-  if not (os.path.exists('%s/dep' % OUTPUT_DIR)):
-    os.makedirs('%s/dep' % OUTPUT_DIR)
-  if not (os.path.exists('%s/ni' % OUTPUT_DIR)):
-    os.makedirs('%s/ni' % OUTPUT_DIR)
-
-  print('Reading edges...')
-  edges = readEdges(EDGES_FILE)
-
-  G = nx.Graph()
-
-  print('Adding edges...')
-  G.add_edges_from(edges)
-
-  print('Calculating core values after removing self-loops...')
-  G.remove_edges_from(nx.selfloop_edges(G))
-
-  print('# nodes = %d, # edges = %d' %(G.number_of_nodes(), G.number_of_edges()))
-
-  cores = nx.core_number(G)
-
-  if core_num is not None:
-    query_subgraph = nx.k_core(G, core_num)
-    print('kth core contains %d nodes and %d edges' % (query_subgraph.number_of_nodes(), query_subgraph.number_of_edges()))
-
-  coreFreq = Counter(cores.values())        # coreFreq = {core_num: number_of_nodes}
-  coreDensityFunc = []; s = 0
-  for x in range(max(coreFreq) - 1, -1, -1):
-    s = s + coreFreq[x]
-    coreDensityFunc.append(s)
-  print(list(reversed(coreDensityFunc)))
-
-  dumpData(cores, '%s/cores.json' % (OUTPUT_DIR))
-
-  print('Getting dependency values...',)
-  kc, aggni = getDep(G, cores, OUTPUT_DIR)
   nucleus = nx.k_core(G, kc)
   print('N(GC) = %d, E(GC) = %d' %(nucleus.number_of_nodes(), nucleus.number_of_edges()))
+  return kc
 
-  coreSubgraph = nx.k_core(G, kc)
-  printBetweennessCentralityPercentile(G, coreSubgraph)
-  printClosenessCentralityPercentile(G, coreSubgraph)
-  printKatzCentralityPercentile(G, coreSubgraph)
-  printBetweennessCentralityPercentile(G, coreSubgraph)
+def plotlyCentralities(cens, G, cores, kc, folder='./'):
+  quants = {}
+  k_max = max(cores.values())
+  for cen in cens:
+    fname = '%s/%s.json' % (folder, cen['name'])
+    if not (os.path.exists(fname)):
+      print('Calculating %s' %(cen['name']))
+      nodes = [x[0] for x in sorted((cen['fn'](G)).items(), key=lambda k: -k[1])]
+      dumpData(nodes, fname)
+    else:
+      with open(fname) as fp:
+        nodes = json.load(fp)
+    num_nuc = len(list(filter(lambda x: cores[x] >= kc, nodes[:50])))
+    num_max = len(list(filter(lambda x: cores[x] >= k_max, nodes[:50])))
+    print(num_nuc, num_max)
+    quants[cen['name']] = { 'k_max' : num_max, 'k_c' : num_nuc }
+  quants['dataset'] = (((folder.split('/'))[-3]).split('.'))[0]
+  dumpData(quants, '%s/top50.json' % folder)
+    # print('Plotting')
+    # h1 = [vals[k] for k in vals.keys() if cores[k] < kc]
+    # h2 = [vals[k] for k in vals.keys() if cores[k] >= kc]
+    # layout = go.Layout(
+    #   title='%s Distribution' % (cen['name']),
+    #   barmode='stack',
+    #   yaxis=dict(
+    #     type='log',
+    #     autorange=True
+    #   )
+    # )
+    # data = [
+    #     go.Histogram(x=h1, name='Outside K_C core'),
+    #     go.Histogram(x=h2, name='Inside K_C core')
+    # ]
+    # fig = go.Figure(data=data, layout=layout)
+    # py.plot(fig, filename='%s/%s.html' % (folder, cen['name']))
+
+def main():
+  if not os.path.exists('%s/.plotly' % (os.path.expanduser('~'))):
+    print('Plotly credentials not present. Please set up plotly.\nDetails: "https://plot.ly/python/getting-started/"')
+    exit(1)
+  if not (os.path.exists(outputDir)):
+    os.makedirs(outputDir)
+  if not (os.path.exists('%s/dep' % outputDir)):
+    os.makedirs('%s/dep' % outputDir)
+  if not (os.path.exists('%s/ni' % outputDir)):
+    os.makedirs('%s/ni' % outputDir)
+  print('Reading edges...')
+  edges = readEdges(efile)
+  G = nx.Graph()
+  print('Done!\nAdding edges...')
+  G.add_edges_from(edges)
+  print('Done!\nCalculating core values after removing self-loops...')
+  G.remove_edges_from(nx.selfloop_edges(G))
+  print('# nodes = %d, # edges = %d' %(G.number_of_nodes(), G.number_of_edges()))
+  cores = nx.core_number(G)
+  if corenum is not None:
+    queryg = nx.k_core(G, corenum)
+    print('kth core contains %d nodes and %d edges' % (queryg.number_of_nodes(), queryg.number_of_edges()))
+  coreFreq = Counter(cores.values())
+  cdf = []; s = 0
+  for x in range(max(coreFreq) - 1, -1, -1):
+    s = s + coreFreq[x]
+    cdf.append(s)
+  # print(list(reversed(cdf)))
+  dumpData(cores, '%s/cores.json' % (outputDir))
+  print('Done!\nGetting dependency values...',)
+  kc = getDep(G, cores, outputDir)
+  cenf = nx.algorithms.centrality
+  cens = [{
+      'fn': cenf.degree_centrality,
+      'name': 'DegreeCentrality'
+  }, {
+      'fn': cenf.closeness_centrality,
+      'name': 'ClosenessCentrality'
+  }, {
+      'fn': cenf.betweenness_centrality,
+      'name': 'BetweennessCentrality'
+  }, {
+      'fn': cenf.eigenvector_centrality,
+      'name': 'EigenvectorCentrality'
+  }]
+  plotlyCentralities(cens, G, cores, kc, '%s/ni/' % (outputDir))
 
 
 if __name__ == '__main__':
